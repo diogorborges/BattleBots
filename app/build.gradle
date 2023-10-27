@@ -1,16 +1,19 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'dagger.hilt.android.plugin'
 }
+
+apply plugin: 'kotlin-kapt'
 
 android {
     namespace 'com.diogo.battlebots'
-    compileSdk 34
+    compileSdk 33
 
     defaultConfig {
         applicationId "com.diogo.battlebots"
         minSdk 26
-        targetSdk 34
+        targetSdk 33
         versionCode 1
         versionName "1.0"
 
@@ -48,12 +51,39 @@ android {
 
 dependencies {
 
+    // Core
     implementation 'androidx.core:core-ktx:1.7.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.3.1'
-    implementation 'androidx.activity:activity-compose:1.3.1'
+
+    // Compose Activity
+    implementation 'androidx.activity:activity-compose:1.4.0'
+
+    // Compose UI
     implementation "androidx.compose.ui:ui:$compose_version"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
+    implementation "androidx.compose.ui:ui-tooling:$compose_version"
+
+    // Compose Foundation (Basic building blocks for UI definition)
+    implementation "androidx.compose.foundation:foundation:$compose_version"
+
+    // Compose Material Design
     implementation 'androidx.compose.material3:material3:1.0.0-alpha02'
+
+    // Navigation Compose
+    implementation 'androidx.navigation:navigation-compose:2.4.0'
+
+    // Coroutines
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.2'
+
+    // Flow
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-reactive:1.5.2'
+
+    // Dagger Hilt
+    implementation "com.google.dagger:hilt-android:2.40.1"
+    kapt "com.google.dagger:hilt-android-compiler:2.40.1"
+
+    // Testing
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
