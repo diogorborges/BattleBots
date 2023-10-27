@@ -1,4 +1,4 @@
-package com.diogo.battlebots
+package com.diogo.battlebots.presentation
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
