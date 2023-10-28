@@ -7,5 +7,6 @@ import javax.inject.Inject
 class MoveRobotUseCase @Inject constructor(
     private val gameBoardRepository: GameBoardRepository
 ) {
-    fun execute(robot: GameBoard.CellType) = gameBoardRepository.moveRobot(robot)
+    fun execute(robot: GameBoard.CellType, direction: GameBoard.Direction) =
+        gameBoardRepository.moveRobot(robot, direction)
 }

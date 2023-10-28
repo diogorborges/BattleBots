@@ -10,7 +10,6 @@ import com.diogo.battlebots.domain.usecase.MoveRobotUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -35,13 +34,15 @@ class GameBoardViewModel @Inject constructor(
     private fun handleGameBoardStream(stream: GameBoardState?) {
         _gameViewState.value = when (stream) {
             is GameBoardState.GameStarted -> GameBoardViewState.GameStarted(stream.board)
-            is GameBoardState.GameUpdated -> GameBoardViewState.RobotMoved(stream.board)
+            is GameBoardState.GameUpdated -> GameBoardViewState.GameUpdated(stream.board)
             is GameBoardState.GameOver -> GameBoardViewState.GameOver(stream.winner)
+            is GameBoardState.InvalidMove-> GameBoardViewState.InvalidMove(stream.board)
             else -> GameBoardViewState.GameIdle
         }
     }
 
     fun initializeGame() = initializeGameUseCase.execute()
 
-    fun moveRobot(robot: GameBoard.CellType) = moveRobotUseCase.execute(robot)
+    fun moveRobot(robot: GameBoard.CellType, direction: GameBoard.Direction) =
+        moveRobotUseCase.execute(robot, direction)
 }

@@ -40,45 +40,39 @@ class GameBoard @Inject constructor(
         return position
     }
 
-    fun moveRobot(robot: CellType) {
+    fun moveRobot(robot: CellType, direction: Direction) {
         val currentPosition = if (robot == CellType.ROBOT1) robot1Position else robot2Position
-        val nextPosition = getNextMove(currentPosition, robot)
+        val nextPosition = getNextMove(currentPosition, direction)
 
-        if (nextPosition != currentPosition) {
-            board[currentPosition.row][currentPosition.col] =
-                if (robot == CellType.ROBOT1) CellType.TRAIL1 else CellType.TRAIL2
+        if (canMove(nextPosition, robot)) {
+            if (isPrizePosition(nextPosition)) {
+                gameBoardStream.boardStream(GameBoardState.GameOver(robot, prizePosition))
+                resetBoard()
+                return
+            }
+
+            board[currentPosition.row][currentPosition.col] = if (robot == CellType.ROBOT1) CellType.TRAIL1 else CellType.TRAIL2
             board[nextPosition.row][nextPosition.col] = robot
 
             if (robot == CellType.ROBOT1) robot1Position.apply {
                 row = nextPosition.row; col = nextPosition.col
+            } else {
+                robot2Position.apply { row = nextPosition.row; col = nextPosition.col }
             }
-            else robot2Position.apply { row = nextPosition.row; col = nextPosition.col }
-        }
 
-        if (hasRobotWon(robot)) {
-            gameBoardStream.boardStream(GameBoardState.GameOver(robot, prizePosition))
-            resetBoard()
-        } else {
             gameBoardStream.boardStream(GameBoardState.GameUpdated(board))
+        } else {
+            gameBoardStream.boardStream(GameBoardState.InvalidMove(board))
         }
     }
 
-    private fun getNextMove(currentPosition: Position, robot: CellType): Position {
-        val possibleDirections = listOf(
-            Position(-1, 0),
-            Position(1, 0),
-            Position(0, -1),
-            Position(0, 1)
-        )
-
-        val validMoves = possibleDirections.map {
-            Position(
-                it.row + currentPosition.row,
-                it.col + currentPosition.col
-            )
-        }.filter { canMove(it, robot) }
-
-        return if (validMoves.isNotEmpty()) validMoves.random() else currentPosition
+    private fun getNextMove(currentPosition: Position, direction: Direction): Position {
+        return when(direction) {
+            Direction.UP -> Position(currentPosition.row - 1, currentPosition.col)
+            Direction.DOWN -> Position(currentPosition.row + 1, currentPosition.col)
+            Direction.LEFT -> Position(currentPosition.row, currentPosition.col - 1)
+            Direction.RIGHT -> Position(currentPosition.row, currentPosition.col + 1)
+        }
     }
 
     private fun canMove(position: Position, robot: CellType): Boolean {
@@ -90,32 +84,20 @@ class GameBoard @Inject constructor(
         return when {
             cell == CellType.PRIZE -> true
             cell == CellType.EMPTY -> true
-            robot == CellType.ROBOT1 && cell == CellType.TRAIL2 -> false
-            robot == CellType.ROBOT2 && cell == CellType.TRAIL1 -> false
+            (robot == CellType.ROBOT1 && cell in listOf(CellType.TRAIL2, CellType.ROBOT2)) -> false
+            (robot == CellType.ROBOT2 && cell in listOf(CellType.TRAIL1, CellType.ROBOT1)) -> false
             else -> false
         }
     }
 
-    private fun findRobotPosition(robot: CellType): Position? {
-        for (i in board.indices) {
-            for (j in board[i].indices) {
-                if (board[i][j] == robot) {
-                    return Position(i, j)
-                }
-            }
-        }
-        return null
-    }
-
-    private fun hasRobotWon(robot: CellType): Boolean =
-        findRobotPosition(robot)?.let {
-            return board[it.row][it.col] == CellType.PRIZE
-        } ?: kotlin.run {
-            return false
-        }
+    private fun isPrizePosition(nextPosition: Position) = board[nextPosition.row][nextPosition.col] == CellType.PRIZE
 
     enum class CellType {
         EMPTY, ROBOT1, ROBOT2, PRIZE, TRAIL1, TRAIL2
+    }
+
+    enum class Direction {
+        UP, DOWN, LEFT, RIGHT
     }
 
     data class Position(var row: Int, var col: Int)
