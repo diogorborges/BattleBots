@@ -177,9 +177,7 @@ fun DisplayGameBoard(
 @Composable
 fun DisplayDirectionOptions(onDirectionSelected: (GameBoard.Direction) -> Unit) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .clickable { }
+        modifier = Modifier.fillMaxSize()
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
