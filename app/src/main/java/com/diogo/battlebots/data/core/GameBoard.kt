@@ -17,7 +17,7 @@ class GameBoard @Inject constructor(
 ) : CoroutineScope {
 
     private var startTimeMillis: Long = 0L
-    val elapsedTime: Long
+    private val elapsedTime: Long
         get() = System.currentTimeMillis() - startTimeMillis
 
     override val coroutineContext = Dispatchers.Main
