@@ -25,7 +25,7 @@ BattleBots is a captivating Android game, combining strategic gameplay with the 
 - The game leverages Kotlin Coroutines for concurrency, providing fluid gameplay while ensuring turn order.
 
 ### Creative Flair
-- A unique "current time mechanism" adds a layer of engagement and charm to the gameplay.
+- The "current time mechanism" and "current robot turn" adds a layer of engagement and charm to the gameplay.
 
 ## Technical Details
 
