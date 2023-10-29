@@ -7,6 +7,5 @@ sealed class GameBoardViewState {
     object GameIdle : GameBoardViewState()
     data class GameStarted(val currentGame: CurrentGame) : GameBoardViewState()
     data class GameUpdated(val currentGame: CurrentGame) : GameBoardViewState()
-    data class GameOver(val winner: GameBoard.CellType) : GameBoardViewState()
-    data class InvalidMove(val currentGame: CurrentGame) : GameBoardViewState()
+    data class GameOver(val winner: GameBoard.CellType?) : GameBoardViewState()
 }

@@ -8,8 +8,5 @@ class GameBoardRepositoryImpl @Inject constructor(
     private val gameBoard: GameBoard
 ) : GameBoardRepository {
 
-    override fun moveRobot(robot: GameBoard.CellType, direction: GameBoard.Direction) =
-        gameBoard.moveRobot(robot, direction)
-
     override fun initializeGame() = gameBoard.initializeGame()
 }

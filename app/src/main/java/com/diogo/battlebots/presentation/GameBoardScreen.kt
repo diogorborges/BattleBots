@@ -1,7 +1,6 @@
 package com.diogo.battlebots.presentation
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Snackbar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,13 +24,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.diogo.battlebots.R
 import com.diogo.battlebots.data.core.CurrentGame
-import com.diogo.battlebots.data.core.GameBoard
 import com.diogo.battlebots.data.core.GameBoard.CellType
 import com.diogo.battlebots.ui.theme.BackgroundColor
 import com.diogo.battlebots.ui.theme.EmptyCellColor
@@ -55,7 +54,7 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
             is GameBoardViewState.GameIdle -> {
                 Text(
                     modifier = Modifier.align(Alignment.Center),
-                    text = "Game is Idle, press Start to begin!",
+                    text = stringResource(R.string.game_is_idle_press_start_to_begin),
                     color = Color.White
                 )
                 Button(
@@ -65,7 +64,7 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
                     onClick = { viewModel.initializeGame() }
                 ) {
                     Text(
-                        text = "Start Game",
+                        text = stringResource(R.string.start_game),
                         color = Color.White
                     )
                 }
@@ -74,16 +73,14 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
             is GameBoardViewState.GameUpdated -> {
                 val gameUpdated = gameState as GameBoardViewState.GameUpdated
                 DisplayGameBoard(
-                    currentGame = gameUpdated.currentGame,
-                    onMoveRobot = viewModel::moveRobot
+                    currentGame = gameUpdated.currentGame
                 )
             }
 
             is GameBoardViewState.GameStarted -> {
                 val gameStarted = gameState as GameBoardViewState.GameStarted
                 DisplayGameBoard(
-                    currentGame = gameStarted.currentGame,
-                    onMoveRobot = viewModel::moveRobot
+                    currentGame = gameStarted.currentGame
                 )
             }
 
@@ -91,12 +88,23 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
                 val gameOver = gameState as GameBoardViewState.GameOver
                 Text(
                     modifier = Modifier.align(Alignment.Center),
-                    text = "Game Over! Winner: ${gameOver.winner}",
+                    text = when {
+                        gameOver.winner != null -> {
+                            stringResource(R.string.game_over_winner, gameOver.winner)
+                        }
+                        else -> {
+                            stringResource(R.string.game_over_no_winners)
+                        }
+                    },
                     style = TextStyle(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     ),
-                    color = if (gameOver.winner == CellType.ROBOT1) Robot1Color else Robot2Color,
+                    color = when (gameOver.winner) {
+                        CellType.ROBOT1 -> Robot1Color
+                        CellType.ROBOT2 -> Robot2Color
+                        else -> Color.White
+                    },
                 )
                 Button(
                     modifier = Modifier
@@ -105,40 +113,17 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
                     onClick = { viewModel.initializeGame() }
                 ) {
                     Text(
-                        text = "Start New Game",
+                        text = stringResource(R.string.start_new_game),
                         color = Color.White
                     )
                 }
-            }
-
-            is GameBoardViewState.InvalidMove -> {
-                val invalidMove = gameState as GameBoardViewState.InvalidMove
-                DisplayGameBoard(
-                    currentGame = invalidMove.currentGame,
-                    onMoveRobot = viewModel::moveRobot
-                )
-                Snackbar(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(16.dp),
-                    backgroundColor = Color.Red,
-                    content = {
-                        Text(
-                            text = "Invalid move!",
-                            color = Color.White
-                        )
-                    }
-                )
             }
         }
     }
 }
 
 @Composable
-fun DisplayGameBoard(
-    onMoveRobot: (CellType, GameBoard.Direction) -> Unit,
-    currentGame: CurrentGame
-) {
+fun DisplayGameBoard(currentGame: CurrentGame) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -178,12 +163,6 @@ fun DisplayGameBoard(
                         .padding(1.dp)
                         .clip(CircleShape)
                         .background(getCellColor(cell))
-                        .clickable {
-                            val direction = determineDirection(currentGame, rowIndex, columnIndex)
-                            direction?.let {
-                                onMoveRobot(currentGame.currentRobotTurn, it)
-                            }
-                        }
                 )
             }
         }
@@ -197,9 +176,9 @@ fun DisplayGameTime(elapsedTime: Long) {
     val hours = (elapsedTime / (1000 * 60 * 60)) % 24
 
     val timeString = if (hours > 0) {
-        String.format("%02d:%02d:%02d", hours, minutes, seconds)
+        String.format(stringResource(R.string.hour_time), hours, minutes, seconds)
     } else {
-        String.format("%02d:%02d", minutes, seconds)
+        String.format(stringResource(R.string.minute_time), minutes, seconds)
     }
 
     Text(
@@ -211,45 +190,6 @@ fun DisplayGameTime(elapsedTime: Long) {
             fontWeight = FontWeight.Bold
         )
     )
-}
-
-private fun determineDirection(
-    currentGame: CurrentGame,
-    targetRow: Int,
-    targetCol: Int
-): GameBoard.Direction? {
-    currentGame.board.findRobotPosition(currentGame.currentRobotTurn)?.let {
-        return when {
-            targetRow == it.first -> {
-                when {
-                    targetCol < it.second -> GameBoard.Direction.LEFT
-                    targetCol > it.second -> GameBoard.Direction.RIGHT
-                    else -> null
-                }
-            }
-
-            targetCol == it.second -> {
-                when {
-                    targetRow < it.first -> GameBoard.Direction.UP
-                    targetRow > it.first -> GameBoard.Direction.DOWN
-                    else -> null
-                }
-            }
-
-            else -> null
-        }
-    } ?: return null
-}
-
-private fun Array<Array<CellType>>.findRobotPosition(robot: CellType): Pair<Int, Int>? {
-    for (row in indices) {
-        for (col in this[row].indices) {
-            if (this[row][col] == robot) {
-                return Pair(row, col)
-            }
-        }
-    }
-    return null
 }
 
 @Composable

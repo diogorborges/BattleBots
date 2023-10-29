@@ -16,7 +16,9 @@ class GameBoard @Inject constructor(
     private var startTimeMillis: Long = 0L
     private val elapsedTime: Long
         get() = System.currentTimeMillis() - startTimeMillis
-    private var timer: Timer? = null
+
+    private var robotTimer: Timer? = null
+    private var gameTimeTimer: Timer? = null
 
     private val robot1Position = Position(0, 0)
     private val robot2Position = Position(BOARD_SIZE - 1, BOARD_SIZE - 1)
@@ -31,39 +33,38 @@ class GameBoard @Inject constructor(
         startTimeMillis = System.currentTimeMillis()
         currentRobotTurn = getRandomInitialRobotTurn()
 
+        startTimers()
+    }
+
+    private fun startTimers() {
+        // Timer for robot movement every 0.5s
+        robotTimer = Timer().apply {
+            scheduleAtFixedRate(object : TimerTask() {
+                override fun run() = moveRobot()
+            }, 0L, 500L)
+        }
+
+        // Timer for updating elapsed game time every 1s
+        gameTimeTimer = Timer().apply {
+            scheduleAtFixedRate(object : TimerTask() {
+                override fun run() = updateGameTime()
+            }, 0L, 1000L)
+        }
+    }
+
+
+    private fun updateGameTime() {
         sendBoardStream(
-            GameBoardState.GameStarted(
+            GameBoardState.GameUpdated(
                 CurrentGame(
-                    robot1Score,
-                    robot2Score,
-                    board,
-                    currentRobotTurn,
-                    elapsedTime
+                    robot1Score = robot1Score,
+                    robot2Score = robot2Score,
+                    board = board,
+                    currentRobotTurn = currentRobotTurn,
+                    elapsedTime = elapsedTime
                 )
             )
         )
-
-        startTimer()
-    }
-
-    private fun startTimer() {
-        timer = Timer().apply {
-            scheduleAtFixedRate(object : TimerTask() {
-                override fun run() {
-                    sendBoardStream(
-                        GameBoardState.GameUpdated(
-                            CurrentGame(
-                                robot1Score,
-                                robot2Score,
-                                board,
-                                currentRobotTurn,
-                                elapsedTime
-                            )
-                        )
-                    )
-                }
-            }, 0L, 1000L)
-        }
     }
 
     private fun getRandomInitialRobotTurn() =
@@ -98,21 +99,21 @@ class GameBoard @Inject constructor(
         return position
     }
 
-    fun moveRobot(robot: CellType, direction: Direction) {
-        val currentPosition = if (robot == CellType.ROBOT1) robot1Position else robot2Position
-        val nextPosition = getNextMove(currentPosition, direction)
-        currentRobotTurn = if (robot == CellType.ROBOT1) CellType.ROBOT2 else CellType.ROBOT1
+    fun moveRobot() {
+        val currentPosition = if (currentRobotTurn == CellType.ROBOT1) robot1Position else robot2Position
+        val nextPosition = getNextMove(currentPosition, currentRobotTurn)
 
-        if (canMove(nextPosition, robot)) {
-            if (isPrizePosition(nextPosition)) {
-                if (robot == CellType.ROBOT1) {
-                    robot1Score++
-                } else {
-                    robot2Score++
-                }
+        if (nextPosition == null) {
+            // Current robot is blocked. Check if the other robot is also blocked.
+            val otherRobot = if (currentRobotTurn == CellType.ROBOT1) CellType.ROBOT2 else CellType.ROBOT1
+            val otherRobotPosition = if (currentRobotTurn == CellType.ROBOT1) robot2Position else robot1Position
+            val otherRobotNextPosition = getNextMove(otherRobotPosition, otherRobot)
+
+            if (otherRobotNextPosition == null) {
+                // Both robots are blocked
                 sendBoardStream(
                     GameBoardState.GameOver(
-                        winner = robot,
+                        winner = null,  // No winner
                         currentGame = CurrentGame(
                             robot1Score,
                             robot2Score,
@@ -122,53 +123,88 @@ class GameBoard @Inject constructor(
                         )
                     )
                 )
-                timer?.cancel()
+                robotTimer?.cancel()
+                gameTimeTimer?.cancel()
                 return
             }
 
-            board[currentPosition.row][currentPosition.col] =
-                if (robot == CellType.ROBOT1) CellType.TRAIL1 else CellType.TRAIL2
-            board[nextPosition.row][nextPosition.col] = robot
-
-            if (robot == CellType.ROBOT1) robot1Position.apply {
-                row = nextPosition.row; col = nextPosition.col
-            } else {
-                robot2Position.apply { row = nextPosition.row; col = nextPosition.col }
-            }
-
-            sendBoardStream(
-                GameBoardState.GameUpdated(
-                    CurrentGame(
-                        robot1Score = robot1Score,
-                        robot2Score = robot2Score,
-                        board = board,
-                        currentRobotTurn = currentRobotTurn,
-                        elapsedTime = elapsedTime
-                    )
-                )
-            )
-        } else {
-            sendBoardStream(
-                GameBoardState.InvalidMove(
-                    CurrentGame(
-                        robot1Score = robot1Score,
-                        robot2Score = robot2Score,
-                        board = board,
-                        currentRobotTurn = currentRobotTurn,
-                        elapsedTime = elapsedTime
-                    )
-                )
-            )
+            // If only the current robot is blocked, just change the turn to the other robot without moving it
+            toggleCurrentRobotTurn()
+            return
         }
+
+        if (isPrizePosition(nextPosition)) {
+            if (currentRobotTurn == CellType.ROBOT1) {
+                robot1Score++
+            } else {
+                robot2Score++
+            }
+            sendBoardStream(
+                GameBoardState.GameOver(
+                    winner = currentRobotTurn,
+                    currentGame = CurrentGame(
+                        robot1Score,
+                        robot2Score,
+                        board,
+                        currentRobotTurn,
+                        elapsedTime
+                    )
+                )
+            )
+            robotTimer?.cancel()
+            gameTimeTimer?.cancel()
+            return
+        }
+
+        board[currentPosition.row][currentPosition.col] =
+            if (currentRobotTurn == CellType.ROBOT1) CellType.TRAIL1 else CellType.TRAIL2
+        board[nextPosition.row][nextPosition.col] = currentRobotTurn
+
+        if (currentRobotTurn == CellType.ROBOT1) {
+            robot1Position.apply { row = nextPosition.row; col = nextPosition.col }
+        } else {
+            robot2Position.apply { row = nextPosition.row; col = nextPosition.col }
+        }
+
+        sendBoardStream(
+            GameBoardState.GameUpdated(
+                CurrentGame(
+                    robot1Score = robot1Score,
+                    robot2Score = robot2Score,
+                    board = board,
+                    currentRobotTurn = currentRobotTurn,
+                    elapsedTime = elapsedTime
+                )
+            )
+        )
+
+        toggleCurrentRobotTurn()
     }
 
-    private fun getNextMove(currentPosition: Position, direction: Direction): Position {
-        return when (direction) {
-            Direction.UP -> Position(currentPosition.row - 1, currentPosition.col)
-            Direction.DOWN -> Position(currentPosition.row + 1, currentPosition.col)
-            Direction.LEFT -> Position(currentPosition.row, currentPosition.col - 1)
-            Direction.RIGHT -> Position(currentPosition.row, currentPosition.col + 1)
+    private fun toggleCurrentRobotTurn() {
+        currentRobotTurn =
+            if (currentRobotTurn == CellType.ROBOT1) CellType.ROBOT2 else CellType.ROBOT1
+    }
+
+    private fun getNextMove(position: Position, robot: CellType): Position? {
+        val possibleDirections =
+            listOf(Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT)
+                .shuffled()
+
+        for (direction in possibleDirections) {
+            val potentialPosition = when (direction) {
+                Direction.UP -> Position(position.row - 1, position.col)
+                Direction.DOWN -> Position(position.row + 1, position.col)
+                Direction.LEFT -> Position(position.row, position.col - 1)
+                Direction.RIGHT -> Position(position.row, position.col + 1)
+            }
+
+            if (canMove(potentialPosition, robot)) {
+                return potentialPosition
+            }
         }
+
+        return null  // No valid move found
     }
 
     private fun canMove(position: Position, robot: CellType): Boolean {
