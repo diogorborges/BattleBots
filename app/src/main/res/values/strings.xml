@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">BattleBots</string>
+    <string name="game_is_idle_press_start_to_begin">Game is Idle, press Start to begin!</string>
+    <string name="start_game">Start Game</string>
+    <string name="game_over_winner">Game Over! Winner: %1$s</string>
+    <string name="game_over_no_winners">Game Over! No winners</string>
+    <string name="start_new_game">Start New Game</string>
+    <string name="hour_time">%02d:%02d:%02d</string>
+    <string name="minute_time">%02d:%02d</string>
+</resources>
