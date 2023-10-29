@@ -17,7 +17,7 @@ class GameBoard @Inject constructor(
 ) : CoroutineScope {
 
     private var startTimeMillis: Long = 0L
-    private val elapsedTime: Long
+    val elapsedTime: Long
         get() = System.currentTimeMillis() - startTimeMillis
 
     override val coroutineContext = Dispatchers.Main
@@ -25,13 +25,13 @@ class GameBoard @Inject constructor(
     private val moveMutex = Mutex()
 
     private var currentRobotTurn = getRandomInitialRobotTurn()
-    private val robot1Position = Position(0, 0)
-    private val robot2Position = Position(BOARD_SIZE - 1, BOARD_SIZE - 1)
+    val robot1Position = Position(0, 0)
+    val robot2Position = Position(BOARD_SIZE - 1, BOARD_SIZE - 1)
     private var prizePosition: Position = Position(0, 0)
     private var robot1Score = 0
     private var robot2Score = 0
 
-    private var board: Array<Array<CellType>> = Array(BOARD_SIZE) {
+    var board: Array<Array<CellType>> = Array(BOARD_SIZE) {
         Array(BOARD_SIZE) { CellType.EMPTY }
     }
 
@@ -111,7 +111,7 @@ class GameBoard @Inject constructor(
         return position
     }
 
-    private fun moveRobot() {
+    fun moveRobot() {
         val currentPosition =
             if (currentRobotTurn == CellType.ROBOT1) robot1Position else robot2Position
         val nextPosition = getNextMove(currentPosition, currentRobotTurn)
@@ -250,6 +250,6 @@ class GameBoard @Inject constructor(
     data class Position(var row: Int, var col: Int)
 
     companion object {
-        private const val BOARD_SIZE = 7
+        const val BOARD_SIZE = 7
     }
 }
