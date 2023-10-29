@@ -1,57 +1,69 @@
 package com.diogo.battlebots.data.core
 
-import java.util.Timer
-import java.util.TimerTask
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class GameBoard @Inject constructor(
     private val gameBoardStream: GameBoardStream
-) {
-    private var board: Array<Array<CellType>> = Array(BOARD_SIZE) {
-        Array(BOARD_SIZE) { CellType.EMPTY }
-    }
-    private var currentRobotTurn = getRandomInitialRobotTurn()
+) : CoroutineScope {
+
     private var startTimeMillis: Long = 0L
     private val elapsedTime: Long
         get() = System.currentTimeMillis() - startTimeMillis
 
-    private var robotTimer: Timer? = null
-    private var gameTimeTimer: Timer? = null
+    override val coroutineContext = Dispatchers.Main
+    private var gameJob: Job? = null
+    private val moveMutex = Mutex()
 
+    private var currentRobotTurn = getRandomInitialRobotTurn()
     private val robot1Position = Position(0, 0)
     private val robot2Position = Position(BOARD_SIZE - 1, BOARD_SIZE - 1)
     private var prizePosition: Position = Position(0, 0)
     private var robot1Score = 0
     private var robot2Score = 0
 
+    private var board: Array<Array<CellType>> = Array(BOARD_SIZE) {
+        Array(BOARD_SIZE) { CellType.EMPTY }
+    }
+
     fun initializeGame() {
+        gameJob = Job()
+
         resetBoard()
         placePrize()
 
         startTimeMillis = System.currentTimeMillis()
-        currentRobotTurn = getRandomInitialRobotTurn()
 
-        startTimers()
+        runGameLoop()
     }
 
-    private fun startTimers() {
-        // Timer for robot movement every 0.5s
-        robotTimer = Timer().apply {
-            scheduleAtFixedRate(object : TimerTask() {
-                override fun run() = moveRobot()
-            }, 0L, 500L)
-        }
-
-        // Timer for updating elapsed game time every 1s
-        gameTimeTimer = Timer().apply {
-            scheduleAtFixedRate(object : TimerTask() {
-                override fun run() = updateGameTime()
-            }, 0L, 1000L)
+    private fun runGameLoop() {
+        gameJob?.let { job ->
+            launch(job + Dispatchers.Main) {
+                while (isActive) {
+                    moveMutex.withLock {
+                        moveRobot()
+                    }
+                    delay(500L)
+                }
+            }
+            launch(job + Dispatchers.Main) {
+                while (isActive) {
+                    updateGameTime()
+                    delay(1000L)
+                }
+            }
         }
     }
-
 
     private fun updateGameTime() {
         sendBoardStream(
@@ -99,21 +111,22 @@ class GameBoard @Inject constructor(
         return position
     }
 
-    fun moveRobot() {
-        val currentPosition = if (currentRobotTurn == CellType.ROBOT1) robot1Position else robot2Position
+    private fun moveRobot() {
+        val currentPosition =
+            if (currentRobotTurn == CellType.ROBOT1) robot1Position else robot2Position
         val nextPosition = getNextMove(currentPosition, currentRobotTurn)
 
         if (nextPosition == null) {
-            // Current robot is blocked. Check if the other robot is also blocked.
-            val otherRobot = if (currentRobotTurn == CellType.ROBOT1) CellType.ROBOT2 else CellType.ROBOT1
-            val otherRobotPosition = if (currentRobotTurn == CellType.ROBOT1) robot2Position else robot1Position
+            val otherRobot =
+                if (currentRobotTurn == CellType.ROBOT1) CellType.ROBOT2 else CellType.ROBOT1
+            val otherRobotPosition =
+                if (currentRobotTurn == CellType.ROBOT1) robot2Position else robot1Position
             val otherRobotNextPosition = getNextMove(otherRobotPosition, otherRobot)
 
             if (otherRobotNextPosition == null) {
-                // Both robots are blocked
                 sendBoardStream(
                     GameBoardState.GameOver(
-                        winner = null,  // No winner
+                        winner = null,
                         currentGame = CurrentGame(
                             robot1Score,
                             robot2Score,
@@ -123,12 +136,10 @@ class GameBoard @Inject constructor(
                         )
                     )
                 )
-                robotTimer?.cancel()
-                gameTimeTimer?.cancel()
+                endGame()
                 return
             }
 
-            // If only the current robot is blocked, just change the turn to the other robot without moving it
             toggleCurrentRobotTurn()
             return
         }
@@ -151,8 +162,7 @@ class GameBoard @Inject constructor(
                     )
                 )
             )
-            robotTimer?.cancel()
-            gameTimeTimer?.cancel()
+            endGame()
             return
         }
 
@@ -204,7 +214,7 @@ class GameBoard @Inject constructor(
             }
         }
 
-        return null  // No valid move found
+        return null
     }
 
     private fun canMove(position: Position, robot: CellType): Boolean {
@@ -220,6 +230,10 @@ class GameBoard @Inject constructor(
             (robot == CellType.ROBOT2 && cell in listOf(CellType.TRAIL1, CellType.ROBOT1)) -> false
             else -> false
         }
+    }
+
+    private fun endGame() {
+        gameJob?.cancel()
     }
 
     private fun isPrizePosition(nextPosition: Position) =
