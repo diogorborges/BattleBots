@@ -10,6 +10,7 @@ class GameBoard @Inject constructor(
     private var board: Array<Array<CellType>> = Array(BOARD_SIZE) {
         Array(BOARD_SIZE) { CellType.EMPTY }
     }
+    private var currentRobotTurn = getRandomInitialRobotTurn()
 
     private val robot1Position = Position(0, 0)
     private val robot2Position = Position(BOARD_SIZE - 1, BOARD_SIZE - 1)
@@ -20,7 +21,26 @@ class GameBoard @Inject constructor(
     fun initializeGame() {
         resetBoard()
         placePrize()
-        gameBoardStream.boardStream(GameBoardState.GameStarted(board, robot1Score, robot2Score))
+
+        currentRobotTurn = getRandomInitialRobotTurn()
+
+        sendBoardStream(
+            GameBoardState.GameStarted(
+                CurrentGame(
+                    robot1Score,
+                    robot2Score,
+                    board,
+                    currentRobotTurn
+                )
+            )
+        )
+    }
+
+    private fun getRandomInitialRobotTurn() =
+        if (Math.random() > 0.5) CellType.ROBOT1 else CellType.ROBOT2
+
+    private fun sendBoardStream(gameBoardState: GameBoardState) {
+        gameBoardStream.boardStream(gameBoardState)
     }
 
     private fun resetBoard() {
@@ -51,6 +71,7 @@ class GameBoard @Inject constructor(
     fun moveRobot(robot: CellType, direction: Direction) {
         val currentPosition = if (robot == CellType.ROBOT1) robot1Position else robot2Position
         val nextPosition = getNextMove(currentPosition, direction)
+        currentRobotTurn = if (robot == CellType.ROBOT1) CellType.ROBOT2 else CellType.ROBOT1
 
         if (canMove(nextPosition, robot)) {
             if (isPrizePosition(nextPosition)) {
@@ -59,11 +80,17 @@ class GameBoard @Inject constructor(
                 } else {
                     robot2Score++
                 }
-                gameBoardStream.boardStream(GameBoardState.GameOver(robot, robot1Score, robot2Score))
+                sendBoardStream(
+                    GameBoardState.GameOver(
+                        winner = robot,
+                        currentGame = CurrentGame(robot1Score, robot2Score, board, currentRobotTurn)
+                    )
+                )
                 return
             }
 
-            board[currentPosition.row][currentPosition.col] = if (robot == CellType.ROBOT1) CellType.TRAIL1 else CellType.TRAIL2
+            board[currentPosition.row][currentPosition.col] =
+                if (robot == CellType.ROBOT1) CellType.TRAIL1 else CellType.TRAIL2
             board[nextPosition.row][nextPosition.col] = robot
 
             if (robot == CellType.ROBOT1) robot1Position.apply {
@@ -72,14 +99,32 @@ class GameBoard @Inject constructor(
                 robot2Position.apply { row = nextPosition.row; col = nextPosition.col }
             }
 
-            gameBoardStream.boardStream(GameBoardState.GameUpdated(board, robot1Score, robot2Score))
+            sendBoardStream(
+                GameBoardState.GameUpdated(
+                    CurrentGame(
+                        robot1Score = robot1Score,
+                        robot2Score = robot2Score,
+                        board = board,
+                        currentRobotTurn = currentRobotTurn
+                    )
+                )
+            )
         } else {
-            gameBoardStream.boardStream(GameBoardState.InvalidMove(board, robot1Score, robot2Score))
+            sendBoardStream(
+                GameBoardState.InvalidMove(
+                    CurrentGame(
+                        robot1Score = robot1Score,
+                        robot2Score = robot2Score,
+                        board = board,
+                        currentRobotTurn = currentRobotTurn
+                    )
+                )
+            )
         }
     }
 
     private fun getNextMove(currentPosition: Position, direction: Direction): Position {
-        return when(direction) {
+        return when (direction) {
             Direction.UP -> Position(currentPosition.row - 1, currentPosition.col)
             Direction.DOWN -> Position(currentPosition.row + 1, currentPosition.col)
             Direction.LEFT -> Position(currentPosition.row, currentPosition.col - 1)
@@ -102,7 +147,8 @@ class GameBoard @Inject constructor(
         }
     }
 
-    private fun isPrizePosition(nextPosition: Position) = board[nextPosition.row][nextPosition.col] == CellType.PRIZE
+    private fun isPrizePosition(nextPosition: Position) =
+        board[nextPosition.row][nextPosition.col] == CellType.PRIZE
 
     enum class CellType {
         EMPTY, ROBOT1, ROBOT2, PRIZE, TRAIL1, TRAIL2

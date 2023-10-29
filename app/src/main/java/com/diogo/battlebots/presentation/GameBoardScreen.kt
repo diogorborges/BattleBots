@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.diogo.battlebots.data.core.CurrentGame
 import com.diogo.battlebots.data.core.GameBoard
 import com.diogo.battlebots.data.core.GameBoard.CellType
 import com.diogo.battlebots.ui.theme.BackgroundColor
@@ -78,28 +79,29 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
             is GameBoardViewState.GameUpdated -> {
                 val gameUpdated = gameState as GameBoardViewState.GameUpdated
                 DisplayGameBoard(
-                    board = gameUpdated.board,
-                    onRobotSelected = { selectedRobot = it },
-                    robot1Score = gameUpdated.robot1Score,
-                    robot2Score = gameUpdated.robot2Score
+                    currentGame = gameUpdated.currentGame,
+                    onRobotSelected = { selectedRobot = it }
                 )
             }
 
             is GameBoardViewState.GameStarted -> {
                 val gameStarted = gameState as GameBoardViewState.GameStarted
                 DisplayGameBoard(
-                    board = gameStarted.board,
-                    onRobotSelected = { selectedRobot = it },
-                    robot1Score = gameStarted.robot1Score,
-                    robot2Score = gameStarted.robot2Score
+                    currentGame = gameStarted.currentGame,
+                    onRobotSelected = { selectedRobot = it }
                 )
             }
 
             is GameBoardViewState.GameOver -> {
+                val gameOver = gameState as GameBoardViewState.GameOver
                 Text(
                     modifier = Modifier.align(Alignment.Center),
-                    text = "Game Over! Winner: ${(gameState as GameBoardViewState.GameOver).winner}",
-                    color = Color.White
+                    text = "Game Over! Winner: ${gameOver.winner}",
+                    style = TextStyle(
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = if (gameOver.winner == CellType.ROBOT1) Robot1Color else Robot2Color,
                 )
                 Button(
                     modifier = Modifier
@@ -117,10 +119,8 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
             is GameBoardViewState.InvalidMove -> {
                 val invalidMove = gameState as GameBoardViewState.InvalidMove
                 DisplayGameBoard(
-                    board = invalidMove.board,
-                    onRobotSelected = { selectedRobot = it },
-                    robot1Score = invalidMove.robot1Score,
-                    robot2Score = invalidMove.robot2Score
+                    currentGame = invalidMove.currentGame,
+                    onRobotSelected = { selectedRobot = it }
                 )
                 Snackbar(
                     modifier = Modifier
@@ -154,26 +154,33 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
 
 @Composable
 fun DisplayGameBoard(
-    board: Array<Array<CellType>>,
     onRobotSelected: (CellType) -> Unit,
-    robot1Score: Int,
-    robot2Score: Int
+    currentGame: CurrentGame
 ) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(top = 24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Display scores here
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 22.dp),
+                .padding(horizontal = 24.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            RobotOneScoreDisplay(score = robot1Score)
-            RobotTwoScoreDisplay(score = robot2Score)
+            RobotOneScoreDisplay(score = currentGame.robot1Score)
+            Text(
+                text = "Turn: ${currentGame.currentRobotTurn}",
+                color = if (currentGame.currentRobotTurn == CellType.ROBOT1) Robot1Color else Robot2Color,
+                style = TextStyle(
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                modifier = Modifier.align(Alignment.CenterVertically)
+            )
+            RobotTwoScoreDisplay(score = currentGame.robot2Score)
         }
+        val board = currentGame.board
         LazyVerticalGrid(
             columns = GridCells.Fixed(board[0].size),
             contentPadding = PaddingValues(20.dp)
@@ -189,7 +196,7 @@ fun DisplayGameBoard(
                         .clip(CircleShape)
                         .background(getCellColor(cell))
                         .clickable {
-                            if (cell == CellType.ROBOT1 || cell == CellType.ROBOT2) {
+                            if (cell == currentGame.currentRobotTurn) {
                                 onRobotSelected(cell)
                             }
                         }
@@ -262,7 +269,7 @@ fun DisplayDirectionOptions(onDirectionSelected: (GameBoard.Direction) -> Unit) 
             ) {
                 Text("UP")
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Row(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
@@ -279,7 +286,7 @@ fun DisplayDirectionOptions(onDirectionSelected: (GameBoard.Direction) -> Unit) 
                     Text("RIGHT")
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Button(
                 onClick = { onDirectionSelected(GameBoard.Direction.DOWN) }
             ) {
