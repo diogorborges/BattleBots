@@ -10,10 +10,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.random.Random
 
 @Singleton
-class GameBoard @Inject constructor(
-    private val gameBoardStream: GameBoardStream
+class GameBoardEngine @Inject constructor(
+    val gameBoardStream: GameBoardStream
 ) : CoroutineScope {
 
     private var startTimeMillis: Long = 0L
@@ -24,10 +25,10 @@ class GameBoard @Inject constructor(
     private var gameJob: Job? = null
     private val moveMutex = Mutex()
 
-    private var currentRobotTurn = getRandomInitialRobotTurn()
-    val robot1Position = Position(0, 0)
-    val robot2Position = Position(BOARD_SIZE - 1, BOARD_SIZE - 1)
-    private var prizePosition: Position = Position(0, 0)
+    var currentRobotTurn = getRandomInitialRobotTurn()
+    var robot1Position = Position(0, 0)
+    var robot2Position = Position(BOARD_SIZE - 1, BOARD_SIZE - 1)
+    var prizePosition: Position = Position(0, 0)
     private var robot1Score = 0
     private var robot2Score = 0
 
@@ -53,13 +54,13 @@ class GameBoard @Inject constructor(
                     moveMutex.withLock {
                         moveRobot()
                     }
-                    delay(500L)
+                    delay(MOVE_DELAY)
                 }
             }
             launch(job + Dispatchers.Main) {
                 while (isActive) {
                     updateGameTime()
-                    delay(1000L)
+                    delay(TIME_UPDATE_DELAY)
                 }
             }
         }
@@ -79,12 +80,11 @@ class GameBoard @Inject constructor(
         )
     }
 
-    private fun getRandomInitialRobotTurn() =
-        if (Math.random() > 0.5) CellType.ROBOT1 else CellType.ROBOT2
+    private fun getRandomInitialRobotTurn(): CellType =
+        if (Random.nextBoolean()) CellType.ROBOT1 else CellType.ROBOT2
 
-    private fun sendBoardStream(gameBoardState: GameBoardState) {
+    private fun sendBoardStream(gameBoardState: GameBoardState) =
         gameBoardStream.boardStream(gameBoardState)
-    }
 
     private fun resetBoard() {
         board = Array(BOARD_SIZE) { Array(BOARD_SIZE) { CellType.EMPTY } }
@@ -114,16 +114,16 @@ class GameBoard @Inject constructor(
     fun moveRobot() {
         val currentPosition =
             if (currentRobotTurn == CellType.ROBOT1) robot1Position else robot2Position
-        val nextPosition = getNextMove(currentPosition, currentRobotTurn)
+        val currentNextPosition = getNextMove(currentPosition, currentRobotTurn)
 
-        if (nextPosition == null) {
-            val otherRobot =
+        if (currentNextPosition == null) {
+            val nextRobot =
                 if (currentRobotTurn == CellType.ROBOT1) CellType.ROBOT2 else CellType.ROBOT1
-            val otherRobotPosition =
+            val nextRobotPosition =
                 if (currentRobotTurn == CellType.ROBOT1) robot2Position else robot1Position
-            val otherRobotNextPosition = getNextMove(otherRobotPosition, otherRobot)
+            val nextRobotNextPosition = getNextMove(nextRobotPosition, nextRobot)
 
-            if (otherRobotNextPosition == null) {
+            if (nextRobotNextPosition == null) {
                 sendBoardStream(
                     GameBoardState.GameOver(
                         winner = null,
@@ -144,7 +144,7 @@ class GameBoard @Inject constructor(
             return
         }
 
-        if (isPrizePosition(nextPosition)) {
+        if (isPrizePosition(currentNextPosition)) {
             if (currentRobotTurn == CellType.ROBOT1) {
                 robot1Score++
             } else {
@@ -168,12 +168,12 @@ class GameBoard @Inject constructor(
 
         board[currentPosition.row][currentPosition.col] =
             if (currentRobotTurn == CellType.ROBOT1) CellType.TRAIL1 else CellType.TRAIL2
-        board[nextPosition.row][nextPosition.col] = currentRobotTurn
+        board[currentNextPosition.row][currentNextPosition.col] = currentRobotTurn
 
         if (currentRobotTurn == CellType.ROBOT1) {
-            robot1Position.apply { row = nextPosition.row; col = nextPosition.col }
+            robot1Position.apply { row = currentNextPosition.row; col = currentNextPosition.col }
         } else {
-            robot2Position.apply { row = nextPosition.row; col = nextPosition.col }
+            robot2Position.apply { row = currentNextPosition.row; col = currentNextPosition.col }
         }
 
         sendBoardStream(
@@ -198,8 +198,7 @@ class GameBoard @Inject constructor(
 
     private fun getNextMove(position: Position, robot: CellType): Position? {
         val possibleDirections =
-            listOf(Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT)
-                .shuffled()
+            listOf(Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT).shuffled()
 
         for (direction in possibleDirections) {
             val potentialPosition = when (direction) {
@@ -251,5 +250,7 @@ class GameBoard @Inject constructor(
 
     companion object {
         const val BOARD_SIZE = 7
+        const val MOVE_DELAY = 500L
+        const val TIME_UPDATE_DELAY = 1000L
     }
 }

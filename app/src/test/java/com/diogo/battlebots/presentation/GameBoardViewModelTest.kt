@@ -1,7 +1,7 @@
 package com.diogo.battlebots.presentation
 
 import com.diogo.battlebots.data.core.CurrentGame
-import com.diogo.battlebots.data.core.GameBoard
+import com.diogo.battlebots.data.core.GameBoardEngine
 import com.diogo.battlebots.data.core.GameBoardState
 import com.diogo.battlebots.data.core.GameBoardStream
 import com.diogo.battlebots.domain.usecase.InitializeGameUseCase
@@ -35,7 +35,7 @@ class GameBoardViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        clearMocks(mockGameBoardStream) // Clear previous interactions with mock
+        clearMocks(mockGameBoardStream)
         coEvery { mockGameBoardStream.gameBoardStream } returns mockGameBoardStreamStateFlow
         viewModel = GameBoardViewModel(mockInitializeGameUseCase, mockGameBoardStream)
     }
@@ -47,12 +47,12 @@ class GameBoardViewModelTest {
     }
 
     @Test
-    fun testGameBoardStreamCollected() = runTest {
+    fun `test collects GameBoardStream on initialization`() = runTest {
         verify { mockGameBoardStream.gameBoardStream }
     }
 
     @Test
-    fun testGameBoardStartedState() = runTest {
+    fun `test collects state should receive game started state`() = runTest {
         val mockGame = mockk<CurrentGame>()
 
         mockGameBoardStreamStateFlow.value = GameBoardState.GameStarted(mockGame)
@@ -63,7 +63,7 @@ class GameBoardViewModelTest {
     }
 
     @Test
-    fun testGameBoardGameUpdatedState() = runTest {
+    fun `test collects state should receive game updated state`() = runTest {
         val mockGame = mockk<CurrentGame>()
 
         mockGameBoardStreamStateFlow.value = GameBoardState.GameUpdated(mockGame)
@@ -74,9 +74,9 @@ class GameBoardViewModelTest {
     }
 
     @Test
-    fun testGameBoardGameOverState() = runTest {
+    fun `test collects state should receive game over state`() = runTest {
         val mockGame = mockk<CurrentGame>()
-        val winner = GameBoard.CellType.ROBOT1
+        val winner = GameBoardEngine.CellType.ROBOT1
 
         mockGameBoardStreamStateFlow.value = GameBoardState.GameOver(winner, mockGame)
 
@@ -86,7 +86,7 @@ class GameBoardViewModelTest {
     }
 
     @Test
-    fun testGameBoardGameIdleState() = runTest {
+    fun `test collects state should receive game idle state`() = runTest {
         assert(viewModel.gameViewState.value == GameBoardViewState.GameIdle)
     }
 

@@ -1,6 +1,6 @@
 package com.diogo.battlebots.di
 
-import com.diogo.battlebots.data.core.GameBoard
+import com.diogo.battlebots.data.core.GameBoardEngine
 import com.diogo.battlebots.data.core.GameBoardStream
 import com.diogo.battlebots.data.core.GameBoardStreamImpl
 import com.diogo.battlebots.data.repository.GameBoardRepository
@@ -27,6 +27,6 @@ abstract class AppModule {
     companion object {
         @Provides
         @Singleton
-        fun provideGameBoard(boardStream: GameBoardStream): GameBoard = GameBoard(boardStream)
+        fun provideGameBoard(boardStream: GameBoardStream): GameBoardEngine = GameBoardEngine(boardStream)
     }
 }
