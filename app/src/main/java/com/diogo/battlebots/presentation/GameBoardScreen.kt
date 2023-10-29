@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,9 +22,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,7 +45,6 @@ import com.diogo.battlebots.ui.theme.Trail2Color
 @Composable
 fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
     val gameState by viewModel.gameViewState.collectAsState()
-    var selectedRobot by remember { mutableStateOf<CellType?>(null) }
 
     Box(
         modifier = Modifier
@@ -80,7 +75,7 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
                 val gameUpdated = gameState as GameBoardViewState.GameUpdated
                 DisplayGameBoard(
                     currentGame = gameUpdated.currentGame,
-                    onRobotSelected = { selectedRobot = it }
+                    onMoveRobot = viewModel::moveRobot
                 )
             }
 
@@ -88,7 +83,7 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
                 val gameStarted = gameState as GameBoardViewState.GameStarted
                 DisplayGameBoard(
                     currentGame = gameStarted.currentGame,
-                    onRobotSelected = { selectedRobot = it }
+                    onMoveRobot = viewModel::moveRobot
                 )
             }
 
@@ -120,7 +115,7 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
                 val invalidMove = gameState as GameBoardViewState.InvalidMove
                 DisplayGameBoard(
                     currentGame = invalidMove.currentGame,
-                    onRobotSelected = { selectedRobot = it }
+                    onMoveRobot = viewModel::moveRobot
                 )
                 Snackbar(
                     modifier = Modifier
@@ -136,32 +131,20 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
                 )
             }
         }
-
-        selectedRobot?.let { robot ->
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-            ) {
-                DisplayDirectionOptions { direction ->
-                    viewModel.moveRobot(robot, direction)
-                    selectedRobot = null
-                }
-            }
-        }
     }
 }
 
 @Composable
 fun DisplayGameBoard(
-    onRobotSelected: (CellType) -> Unit,
+    onMoveRobot: (CellType, GameBoard.Direction) -> Unit,
     currentGame: CurrentGame
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(top = 24.dp),
+        modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        DisplayGameTime(currentGame.elapsedTime)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -196,14 +179,77 @@ fun DisplayGameBoard(
                         .clip(CircleShape)
                         .background(getCellColor(cell))
                         .clickable {
-                            if (cell == currentGame.currentRobotTurn) {
-                                onRobotSelected(cell)
+                            val direction = determineDirection(currentGame, rowIndex, columnIndex)
+                            direction?.let {
+                                onMoveRobot(currentGame.currentRobotTurn, it)
                             }
                         }
                 )
             }
         }
     }
+}
+
+@Composable
+fun DisplayGameTime(elapsedTime: Long) {
+    val seconds = (elapsedTime / 1000) % 60
+    val minutes = (elapsedTime / (1000 * 60)) % 60
+    val hours = (elapsedTime / (1000 * 60 * 60)) % 24
+
+    val timeString = if (hours > 0) {
+        String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format("%02d:%02d", minutes, seconds)
+    }
+
+    Text(
+        modifier = Modifier.padding(bottom = 8.dp),
+        text = timeString,
+        color = Color.White,
+        style = TextStyle(
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
+    )
+}
+
+private fun determineDirection(
+    currentGame: CurrentGame,
+    targetRow: Int,
+    targetCol: Int
+): GameBoard.Direction? {
+    currentGame.board.findRobotPosition(currentGame.currentRobotTurn)?.let {
+        return when {
+            targetRow == it.first -> {
+                when {
+                    targetCol < it.second -> GameBoard.Direction.LEFT
+                    targetCol > it.second -> GameBoard.Direction.RIGHT
+                    else -> null
+                }
+            }
+
+            targetCol == it.second -> {
+                when {
+                    targetRow < it.first -> GameBoard.Direction.UP
+                    targetRow > it.first -> GameBoard.Direction.DOWN
+                    else -> null
+                }
+            }
+
+            else -> null
+        }
+    } ?: return null
+}
+
+private fun Array<Array<CellType>>.findRobotPosition(robot: CellType): Pair<Int, Int>? {
+    for (row in indices) {
+        for (col in this[row].indices) {
+            if (this[row][col] == robot) {
+                return Pair(row, col)
+            }
+        }
+    }
+    return null
 }
 
 @Composable
@@ -251,48 +297,6 @@ fun RobotTwoScoreDisplay(score: Int) {
                 .clip(CircleShape)
                 .background(Robot2Color)
         )
-    }
-}
-
-@Composable
-fun DisplayDirectionOptions(onDirectionSelected: (GameBoard.Direction) -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Button(
-                onClick = { onDirectionSelected(GameBoard.Direction.UP) }
-            ) {
-                Text("UP")
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Button(
-                    onClick = { onDirectionSelected(GameBoard.Direction.LEFT) }
-                ) {
-                    Text("LEFT")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(
-                    onClick = { onDirectionSelected(GameBoard.Direction.RIGHT) }
-                ) {
-                    Text("RIGHT")
-                }
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Button(
-                onClick = { onDirectionSelected(GameBoard.Direction.DOWN) }
-            ) {
-                Text("DOWN")
-            }
-        }
     }
 }
 

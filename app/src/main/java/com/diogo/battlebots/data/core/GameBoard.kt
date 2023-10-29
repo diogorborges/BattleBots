@@ -1,5 +1,7 @@
 package com.diogo.battlebots.data.core
 
+import java.util.Timer
+import java.util.TimerTask
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -11,6 +13,10 @@ class GameBoard @Inject constructor(
         Array(BOARD_SIZE) { CellType.EMPTY }
     }
     private var currentRobotTurn = getRandomInitialRobotTurn()
+    private var startTimeMillis: Long = 0L
+    private val elapsedTime: Long
+        get() = System.currentTimeMillis() - startTimeMillis
+    private var timer: Timer? = null
 
     private val robot1Position = Position(0, 0)
     private val robot2Position = Position(BOARD_SIZE - 1, BOARD_SIZE - 1)
@@ -22,6 +28,7 @@ class GameBoard @Inject constructor(
         resetBoard()
         placePrize()
 
+        startTimeMillis = System.currentTimeMillis()
         currentRobotTurn = getRandomInitialRobotTurn()
 
         sendBoardStream(
@@ -30,10 +37,33 @@ class GameBoard @Inject constructor(
                     robot1Score,
                     robot2Score,
                     board,
-                    currentRobotTurn
+                    currentRobotTurn,
+                    elapsedTime
                 )
             )
         )
+
+        startTimer()
+    }
+
+    private fun startTimer() {
+        timer = Timer().apply {
+            scheduleAtFixedRate(object : TimerTask() {
+                override fun run() {
+                    sendBoardStream(
+                        GameBoardState.GameUpdated(
+                            CurrentGame(
+                                robot1Score,
+                                robot2Score,
+                                board,
+                                currentRobotTurn,
+                                elapsedTime
+                            )
+                        )
+                    )
+                }
+            }, 0L, 1000L)
+        }
     }
 
     private fun getRandomInitialRobotTurn() =
@@ -83,9 +113,16 @@ class GameBoard @Inject constructor(
                 sendBoardStream(
                     GameBoardState.GameOver(
                         winner = robot,
-                        currentGame = CurrentGame(robot1Score, robot2Score, board, currentRobotTurn)
+                        currentGame = CurrentGame(
+                            robot1Score,
+                            robot2Score,
+                            board,
+                            currentRobotTurn,
+                            elapsedTime
+                        )
                     )
                 )
+                timer?.cancel()
                 return
             }
 
@@ -105,7 +142,8 @@ class GameBoard @Inject constructor(
                         robot1Score = robot1Score,
                         robot2Score = robot2Score,
                         board = board,
-                        currentRobotTurn = currentRobotTurn
+                        currentRobotTurn = currentRobotTurn,
+                        elapsedTime = elapsedTime
                     )
                 )
             )
@@ -116,7 +154,8 @@ class GameBoard @Inject constructor(
                         robot1Score = robot1Score,
                         robot2Score = robot2Score,
                         board = board,
-                        currentRobotTurn = currentRobotTurn
+                        currentRobotTurn = currentRobotTurn,
+                        elapsedTime = elapsedTime
                     )
                 )
             )
