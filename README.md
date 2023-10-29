@@ -1,5 +1,8 @@
 # BattleBots: An Android Strategy Game
 
+<img src=https://github.com/diogorborges/BattleBots/assets/12548332/69dce3cd-1786-44be-8568-6afd80394b66 width=300>
+
+
 ## Overview
 
 BattleBots is a captivating Android game, combining strategic gameplay with the latest in Android development practices. Watch robots navigate a board in their quest for prizes and immerse yourself in a world where strategy meets Android prowess.
