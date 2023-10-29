@@ -33,10 +33,26 @@ class GameBoardViewModel @Inject constructor(
 
     private fun handleGameBoardStream(stream: GameBoardState?) {
         _gameViewState.value = when (stream) {
-            is GameBoardState.GameStarted -> GameBoardViewState.GameStarted(stream.board)
-            is GameBoardState.GameUpdated -> GameBoardViewState.GameUpdated(stream.board)
+            is GameBoardState.GameStarted -> GameBoardViewState.GameStarted(
+                stream.board,
+                stream.robot1Score,
+                stream.robot2Score
+            )
+
+            is GameBoardState.GameUpdated -> GameBoardViewState.GameUpdated(
+                stream.board,
+                stream.robot1Score,
+                stream.robot2Score
+            )
+
+            is GameBoardState.InvalidMove -> GameBoardViewState.InvalidMove(
+                stream.board,
+                stream.robot1Score,
+                stream.robot2Score
+            )
+
             is GameBoardState.GameOver -> GameBoardViewState.GameOver(stream.winner)
-            is GameBoardState.InvalidMove-> GameBoardViewState.InvalidMove(stream.board)
+
             else -> GameBoardViewState.GameIdle
         }
     }

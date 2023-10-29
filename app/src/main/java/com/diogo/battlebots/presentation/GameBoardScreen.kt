@@ -30,7 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.diogo.battlebots.data.core.GameBoard
 import com.diogo.battlebots.data.core.GameBoard.CellType
@@ -73,16 +76,22 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
             }
 
             is GameBoardViewState.GameUpdated -> {
+                val gameUpdated = gameState as GameBoardViewState.GameUpdated
                 DisplayGameBoard(
-                    board = (gameState as GameBoardViewState.GameUpdated).board,
-                    onRobotSelected = { selectedRobot = it }
+                    board = gameUpdated.board,
+                    onRobotSelected = { selectedRobot = it },
+                    robot1Score = gameUpdated.robot1Score,
+                    robot2Score = gameUpdated.robot2Score
                 )
             }
 
             is GameBoardViewState.GameStarted -> {
+                val gameStarted = gameState as GameBoardViewState.GameStarted
                 DisplayGameBoard(
-                    board = (gameState as GameBoardViewState.GameStarted).board,
-                    onRobotSelected = { selectedRobot = it }
+                    board = gameStarted.board,
+                    onRobotSelected = { selectedRobot = it },
+                    robot1Score = gameStarted.robot1Score,
+                    robot2Score = gameStarted.robot2Score
                 )
             }
 
@@ -106,9 +115,12 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
             }
 
             is GameBoardViewState.InvalidMove -> {
+                val invalidMove = gameState as GameBoardViewState.InvalidMove
                 DisplayGameBoard(
-                    board = (gameState as GameBoardViewState.InvalidMove).board,
-                    onRobotSelected = { selectedRobot = it }
+                    board = invalidMove.board,
+                    onRobotSelected = { selectedRobot = it },
+                    robot1Score = invalidMove.robot1Score,
+                    robot2Score = invalidMove.robot2Score
                 )
                 Snackbar(
                     modifier = Modifier
@@ -143,12 +155,25 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
 @Composable
 fun DisplayGameBoard(
     board: Array<Array<CellType>>,
-    onRobotSelected: (CellType) -> Unit
+    onRobotSelected: (CellType) -> Unit,
+    robot1Score: Int,
+    robot2Score: Int
 ) {
-    Box(
+    Column(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Display scores here
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 22.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            RobotOneScoreDisplay(score = robot1Score)
+            RobotTwoScoreDisplay(score = robot2Score)
+        }
         LazyVerticalGrid(
             columns = GridCells.Fixed(board[0].size),
             contentPadding = PaddingValues(20.dp)
@@ -171,6 +196,54 @@ fun DisplayGameBoard(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun RobotOneScoreDisplay(score: Int) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(CircleShape)
+                .background(Robot1Color)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "$score",
+            color = Robot1Color,
+            style = TextStyle(
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        )
+    }
+}
+
+@Composable
+fun RobotTwoScoreDisplay(score: Int) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "$score",
+            color = Robot2Color,
+            style = TextStyle(
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(CircleShape)
+                .background(Robot2Color)
+        )
     }
 }
 

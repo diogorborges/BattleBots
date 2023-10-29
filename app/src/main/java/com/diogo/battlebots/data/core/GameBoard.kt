@@ -14,15 +14,23 @@ class GameBoard @Inject constructor(
     private val robot1Position = Position(0, 0)
     private val robot2Position = Position(BOARD_SIZE - 1, BOARD_SIZE - 1)
     private var prizePosition: Position = Position(0, 0)
+    private var robot1Score = 0
+    private var robot2Score = 0
 
     fun initializeGame() {
         resetBoard()
         placePrize()
-        gameBoardStream.boardStream(GameBoardState.GameStarted(board))
+        gameBoardStream.boardStream(GameBoardState.GameStarted(board, robot1Score, robot2Score))
     }
 
     private fun resetBoard() {
         board = Array(BOARD_SIZE) { Array(BOARD_SIZE) { CellType.EMPTY } }
+
+        robot1Position.row = 0
+        robot1Position.col = 0
+        robot2Position.row = BOARD_SIZE - 1
+        robot2Position.col = BOARD_SIZE - 1
+
         board[robot1Position.row][robot1Position.col] = CellType.ROBOT1
         board[robot2Position.row][robot2Position.col] = CellType.ROBOT2
     }
@@ -36,7 +44,7 @@ class GameBoard @Inject constructor(
         var position: Position
         do {
             position = Position((0 until BOARD_SIZE).random(), (0 until BOARD_SIZE).random())
-        } while (board[position.row][position.col] != CellType.EMPTY)
+        } while (board[position.row][position.col] != CellType.EMPTY || position == robot1Position || position == robot2Position)
         return position
     }
 
@@ -46,8 +54,12 @@ class GameBoard @Inject constructor(
 
         if (canMove(nextPosition, robot)) {
             if (isPrizePosition(nextPosition)) {
-                gameBoardStream.boardStream(GameBoardState.GameOver(robot, prizePosition))
-                resetBoard()
+                if (robot == CellType.ROBOT1) {
+                    robot1Score++
+                } else {
+                    robot2Score++
+                }
+                gameBoardStream.boardStream(GameBoardState.GameOver(robot, robot1Score, robot2Score))
                 return
             }
 
@@ -60,9 +72,9 @@ class GameBoard @Inject constructor(
                 robot2Position.apply { row = nextPosition.row; col = nextPosition.col }
             }
 
-            gameBoardStream.boardStream(GameBoardState.GameUpdated(board))
+            gameBoardStream.boardStream(GameBoardState.GameUpdated(board, robot1Score, robot2Score))
         } else {
-            gameBoardStream.boardStream(GameBoardState.InvalidMove(board))
+            gameBoardStream.boardStream(GameBoardState.InvalidMove(board, robot1Score, robot2Score))
         }
     }
 
