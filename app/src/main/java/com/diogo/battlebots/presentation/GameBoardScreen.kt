@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.diogo.battlebots.R
 import com.diogo.battlebots.data.core.CurrentGame
-import com.diogo.battlebots.data.core.GameBoard.CellType
+import com.diogo.battlebots.data.core.GameBoardEngine.CellType
 import com.diogo.battlebots.ui.theme.BackgroundColor
 import com.diogo.battlebots.ui.theme.EmptyCellColor
 import com.diogo.battlebots.ui.theme.PrizeColor

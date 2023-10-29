@@ -1,6 +1,5 @@
 package com.diogo.battlebots.data.core
 
-
 import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNull
@@ -16,7 +15,7 @@ import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class GameBoardStreamImplTest {
+class GameBoardStreamTest {
 
     private lateinit var gameBoardStream: GameBoardStream
     private val testDispatcher = StandardTestDispatcher()
@@ -34,38 +33,30 @@ class GameBoardStreamImplTest {
     }
 
     @Test
-    fun testStreamInitialized() {
+    fun `stream initial state is null`() {
         assertNull(gameBoardStream.gameBoardStream.value)
     }
 
     @Test
-    fun testGameBoardStreamGameStartedState() = runTest {
-        val mockGame = mockk<CurrentGame>()
-        val mockState = GameBoardState.GameStarted(mockGame)
-
-        gameBoardStream.boardStream(mockState)
-
-        assertEquals(mockState, gameBoardStream.gameBoardStream.value)
+    fun `stream should receive started state`() = runTest {
+        val state = GameBoardState.GameStarted(mockk())
+        assertStateIsUpdated(state)
     }
 
     @Test
-    fun testGameBoardStreamGameUpdatedState() = runTest {
-        val mockGame = mockk<CurrentGame>()
-        val mockState = GameBoardState.GameUpdated(mockGame)
-
-        gameBoardStream.boardStream(mockState)
-
-        assertEquals(mockState, gameBoardStream.gameBoardStream.value)
+    fun `stream should receive updated state`() = runTest {
+        val state = GameBoardState.GameUpdated(mockk())
+        assertStateIsUpdated(state)
     }
 
     @Test
-    fun testGameBoardStreamGameOverState() = runTest {
-        val mockGame = mockk<CurrentGame>()
-        val winner = GameBoard.CellType.ROBOT1
-        val mockState = GameBoardState.GameOver(winner, mockGame)
+    fun `stream should receive game over state`() = runTest {
+        val state = GameBoardState.GameOver(GameBoardEngine.CellType.ROBOT1, mockk())
+        assertStateIsUpdated(state)
+    }
 
-        gameBoardStream.boardStream(mockState)
-
-        assertEquals(mockState, gameBoardStream.gameBoardStream.value)
+    private fun assertStateIsUpdated(state: GameBoardState) {
+        gameBoardStream.boardStream(state)
+        assertEquals(state, gameBoardStream.gameBoardStream.value)
     }
 }
