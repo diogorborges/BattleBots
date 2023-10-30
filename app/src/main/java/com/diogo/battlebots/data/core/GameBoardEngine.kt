@@ -14,7 +14,7 @@ import kotlin.random.Random
 
 @Singleton
 class GameBoardEngine @Inject constructor(
-    val gameBoardStream: GameBoardStream
+    private val gameBoardStream: GameBoardStream
 ) : CoroutineScope {
 
     private var startTimeMillis: Long = 0L
