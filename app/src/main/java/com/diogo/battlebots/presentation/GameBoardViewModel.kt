@@ -30,7 +30,6 @@ class GameBoardViewModel @Inject constructor(
 
     private fun handleGameBoardStream(stream: GameBoardState?) {
         _gameViewState.value = when (stream) {
-            is GameBoardState.GameStarted -> GameBoardViewState.GameStarted(stream.currentGame)
             is GameBoardState.GameUpdated -> GameBoardViewState.GameUpdated(stream.currentGame)
             is GameBoardState.GameOver -> GameBoardViewState.GameOver(stream.winner)
             else -> GameBoardViewState.GameIdle

@@ -52,17 +52,6 @@ class GameBoardViewModelTest {
     }
 
     @Test
-    fun `test collects state should receive game started state`() = runTest {
-        val mockGame = mockk<CurrentGame>()
-
-        mockGameBoardStreamStateFlow.value = GameBoardState.GameStarted(mockGame)
-
-        advanceUntilIdle()
-
-        assert(viewModel.gameViewState.value == GameBoardViewState.GameStarted(mockGame))
-    }
-
-    @Test
     fun `test collects state should receive game updated state`() = runTest {
         val mockGame = mockk<CurrentGame>()
 

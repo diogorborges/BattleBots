@@ -77,13 +77,6 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
                 )
             }
 
-            is GameBoardViewState.GameStarted -> {
-                val gameStarted = gameState as GameBoardViewState.GameStarted
-                DisplayGameBoard(
-                    currentGame = gameStarted.currentGame
-                )
-            }
-
             is GameBoardViewState.GameOver -> {
                 val gameOver = gameState as GameBoardViewState.GameOver
                 Text(
@@ -92,6 +85,7 @@ fun GameBoardScreen(viewModel: GameBoardViewModel = hiltViewModel()) {
                         gameOver.winner != null -> {
                             stringResource(R.string.game_over_winner, gameOver.winner)
                         }
+
                         else -> {
                             stringResource(R.string.game_over_no_winners)
                         }
