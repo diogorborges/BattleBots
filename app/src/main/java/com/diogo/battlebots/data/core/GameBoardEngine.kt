@@ -28,7 +28,7 @@ class GameBoardEngine @Inject constructor(
     var currentRobotTurn = getRandomInitialRobotTurn()
     var robot1Position = Position(0, 0)
     var robot2Position = Position(BOARD_SIZE - 1, BOARD_SIZE - 1)
-    var prizePosition: Position = Position(0, 0)
+    private var prizePosition: Position = Position(0, 0)
     private var robot1Score = 0
     private var robot2Score = 0
 
