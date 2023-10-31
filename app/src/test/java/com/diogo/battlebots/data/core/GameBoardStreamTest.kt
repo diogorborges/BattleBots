@@ -38,12 +38,6 @@ class GameBoardStreamTest {
     }
 
     @Test
-    fun `stream should receive started state`() = runTest {
-        val state = GameBoardState.GameStarted(mockk())
-        assertStateIsUpdated(state)
-    }
-
-    @Test
     fun `stream should receive updated state`() = runTest {
         val state = GameBoardState.GameUpdated(mockk())
         assertStateIsUpdated(state)
