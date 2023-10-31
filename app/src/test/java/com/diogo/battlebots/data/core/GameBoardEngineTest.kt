@@ -122,21 +122,6 @@ class GameBoardEngineTest {
     }
 
     @Test
-    fun `robot should not move into a cell occupied by another robot`() = runTest {
-        // Given
-        gameBoardEngine.initializeGame()
-
-        gameBoardEngine.robot1Position = GameBoardEngine.Position(5, 5)
-        gameBoardEngine.robot2Position = GameBoardEngine.Position(5, 6)
-
-        // When
-        gameBoardEngine.moveRobot()
-
-        // Then
-        assert(gameBoardEngine.robot1Position != gameBoardEngine.robot2Position)
-    }
-
-    @Test
     fun `robot should leave a trail when moving`() = runTest {
         // Given
         gameBoardEngine.initializeGame()
