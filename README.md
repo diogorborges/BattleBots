@@ -53,6 +53,9 @@ BattleBots is a captivating Android game, combining strategic gameplay with the 
 ### Testing
 - Comprehensive unit tests using MockK validate game logic, state transitions, robot movements, and overall gameplay.
 
+### CI
+- Github actions added for building and testing.
+
 ## Getting Started
 
 1. Ensure you have **Android Studio Giraffe | 2022.3.1 Patch 2** with **Java 17** installed due to the game's requirement for Gradle 8.
